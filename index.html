@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Spice diode model</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <link rel="shortcut icon" href="icon.png" type="image/png" />
+
+    <script type="text/javascript" src="canvas.js"></script>
+    <script type="text/javascript" src="chart_xyxy.js"></script>
+    <script type="text/javascript" src="engineering.js"></script>
+    <script type="text/javascript" src="models.js"></script>
+    <script type="text/javascript" src="real_diodes.js"></script>
+
+    <script type="text/javascript" src="index.js"></script>
+
+    <style>
+    h3 {
+        margin: 0;
+        padding: 0;
+    }
+    label {
+        display: inline-block;
+        min-width: 4em;
+    }
+    input[type=number] {
+        max-width: 18ex;
+        min-width: 18ex;
+    }
+    table, tr, td, th {
+        border: 1px solid black;
+        border-collapse: collapse;
+    }
+    td {
+        min-width: 3ex;
+        text-align: right;
+    }
+    #chart1 {
+      width: 100%;
+      height: 80vw;
+    }
+    @media only screen and (min-width: 600px) {
+      #chart {
+        display: inline-block;
+      }
+      #chart1 {
+          width: 45vw;
+          height: 45vw;
+      }
+      main {
+        max-width: 50vw;
+        position: fixed;
+        left: 50vw;
+        top: 1ex;
+      }
+    }
+    </style>
+
+  </head>
+  <body>
+    <div id="chart" style="outline: 0px solid red;">
+        <div style="position: relative">
+            <div id="zoom_to_fit" style="position: absolute; top: 1ex; right: 1ex; cursor: pointer;" title="Zoom to fit curves into chart">🔎</div>
+        </div>
+        <canvas id="chart1" style=""></canvas>
+        <div><span style="color: red;">&mdash;</span> real diode, <span style="color: green;">&mdash;</span> model</div>
+    </div>
+
+    <main>
+
+
+        <h3>Settings</h3>
+
+        <p>
+        <label>Temperature</label>
+        <input id="temperature" type="number" value="25" min="-273" max="150" step="1" dataWheelStep="1"/>°C
+        </p>
+
+
+        <h3 style="color: red;">Real diode</h3>
+
+        <p>
+        Paste CSV file with forward voltage in volts and forward current in amps (e.g. 2.7mA is 0.0027 or 2.7e-3), comma separated values, each measurement on new line.
+        You can also use one of these real measured diodes:
+        <select id="preset_real">
+            <option selected>1N4007</option>
+            <option>1N4148</option>
+            <option>1N5399</option>
+            <option>1N5408</option>
+            <option>1N5819</option>
+            <option>1N5822</option>
+            <option>FR107</option>
+            <option>FR207</option>
+            <option>LED_RED</option>
+            <option>LED_GREEN</option>
+            <option>LED_BLUE</option>
+            <option>LED_YELLOW</option>
+            <option>LED_WHITE</option>
+        </select>
+        <a href="how_to_measure_diode.png">How to measure diode</a>
+        <br>
+        <br>
+
+        <textarea id="measured_values" style="height: 22em; display: block;" placeholder="Paste CSV file here"></textarea>
+        </p>
+
+
+        <h3 style="color: green;">Diode model</h3>
+
+        <p>
+
+        <label>IS</label>
+        <input title="" id="IS" type="number" value="1.46464e-9" min="0" max="10" step="0.000000000001" dataWheelStep="0.05"/>A - Reverse saturation current
+        <br>
+
+        <label>N</label>
+        <input title="" id="N" type="number" value="1.71972" min="0" max="10" step="0.01" dataWheelStep="0.005"/> Emission coefficient
+        <br>
+
+        <label>RS</label>
+        <input title="" id="RS" type="number" value="0.355592" min="0" max="1000" step="0.01" dataWheelStep="0.1"/>Ω - Ohmic (series) resistance
+        <br>
+
+        <label>Preset</label>
+        <select id="preset_model">
+            <option selected></option>
+            <option>1N4007</option>
+            <option>1N4148</option>
+            <option>1N5399</option>
+            <option>1N5408</option>
+            <option>1N5819</option>
+            <option>1N5822</option>
+            <option>FR107</option>
+            <option>FR207</option>
+            <option>LED_RED</option>
+            <option>LED_GREEN</option>
+            <option>LED_BLUE</option>
+            <option>LED_YELLOW</option>
+            <option>LED_WHITE</option>
+        </select>
+        <br>
+        <br>
+
+        <button id="best_fit">Match ends</button>
+        <button id="sharper">Sharper knee</button>
+        <button id="duller">Duller knee</button>
+        </p>
+
+        <p>
+        <b>Spice code:</b> <span id="spice"></span><br>
+        </p>
+
+    </main>
+
+  </body>
+</html>
+
+
+
