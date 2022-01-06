@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Spice diode model</title>
+    <title>Spice diode modelling</title>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="viewport" content="width=device-width" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <link rel="shortcut icon" href="icon.png" type="image/png" />
+
+    <!-- link rel="stylesheet" href="diode.css" type="text/css" / -->
 
     <script type="text/javascript" src="canvas.js"></script>
     <script type="text/javascript" src="chart_xyxy.js"></script>
@@ -86,6 +88,7 @@
         Paste CSV file with forward voltage in volts and forward current in amps (e.g. 2.7mA is 0.0027 or 2.7e-3), comma separated values, each measurement on new line.
         You can also use one of these real measured diodes:
         <select id="preset_real">
+            <option>1N34A</option>
             <option selected>1N4007</option>
             <option>1N4148</option>
             <option>1N5399</option>
@@ -104,7 +107,7 @@
         <br>
         <br>
 
-        <textarea id="measured_values" style="height: 22em; display: block;" placeholder="Paste CSV file here"></textarea>
+        <textarea id="measured_values" style="width: 18em; height: 22em; display: block;" placeholder="Paste CSV file here"></textarea>
         </p>
 
 
@@ -127,6 +130,7 @@
         <label>Preset</label>
         <select id="preset_model">
             <option selected></option>
+            <option>1N34A</option>
             <option>1N4007</option>
             <option>1N4148</option>
             <option>1N5399</option>
