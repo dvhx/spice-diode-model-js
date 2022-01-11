@@ -5,6 +5,8 @@
 var SC = window.SC || {};
 
 SC.steps = 50; // Number of points in model curve
+SC.optimizeForAvg = true; // radio buttons avg/max difference scoring
+SC.aggressiveScoring = false; // makes difference above 20% have weight double
 
 SC.diodeCurveOnePoint = function (aVoltage, aTemperature, aIS, aN, aRS) {
     // Calculate voltage and current for a diode the same way as ngspice
@@ -37,8 +39,16 @@ SC.diodeCurveOnePoint = function (aVoltage, aTemperature, aIS, aN, aRS) {
 
 SC.diodeCurve = function (aVMax, aTemp, aIS, aN, aRS) {
     // calculate VA curve in given range from model params IS N RS
-    var i = 0, v = 0, va, r = [], a, b, dx, dy, q;
+    var i = 0, vmin, v, va, r = [], a, b, dx, dy, q;
 
+    // starts from same spot as measured curve to not waste points where there are no measurements, e.g. LED
+    vmin = 0.95 * SC.measuredVA[0][0];
+    if (vmin > aVMax - 0.1) {
+        vmin = aVMax - 0.1;
+    }
+    v = vmin;
+
+    // points
     do {
         i++;
         if (i > 1000) {
@@ -46,23 +56,39 @@ SC.diodeCurve = function (aVMax, aTemp, aIS, aN, aRS) {
             break;
         }
         va = SC.diodeCurveOnePoint(v, aTemp, aIS, aN, aRS);
-        v += aVMax / SC.steps;
-        //console.log(v, va);
+        v += (aVMax - vmin) / SC.steps;
         r.push([va.voltage, va.current]);
     } while (va.voltage < aVMax);
 
-    // make end exactly in aVMax (for simpler score calculation)
+    // make end exactly in aVMax
     a = r[r.length - 2];
     b = r[r.length - 1];
-    if (a[0] < aVMax && b[0] > aVMax) {
+    if (a && b && (a[0] < aVMax) && (b[0] > aVMax)) {
         dx = b[0] - a[0];
         dy = b[1] - a[1];
-        //console.log({a, b, aVMax, dx, dy});
         b[0] = aVMax;
         q = (aVMax - a[0]) / dx;
         b[1] = a[1] + q * dy;
     }
+
+    // drop modelVA data below lowest measured current to fit chart better
+    if (SC.measuredVA) {
+        for (i = r.length - 1; i > 0; i--) {
+            if (r[i][1] < SC.measuredVA[0][1]) {
+                r = r.slice(i - 1); // slice is shallow
+                break;
+            }
+        }
+    }
+
     return r;
+};
+
+SC.showSpiceModel = function () {
+    // Show spice and js model at the bottom of the page
+    var name = SC.e.preset_real.value + (SC.e.optimize_for_max.checked ? '_2' : '');
+    SC.e.spice.textContent = '.model ' + name + ' D(IS=' + SC.model.IS.toPrecision(6) + ' N=' + SC.model.N.toPrecision(6) + ' RS=' + SC.model.RS.toPrecision(6) + ')';
+    SC.e.js_code.textContent = '"' + name + '": {IS: ' + SC.model.IS.toPrecision(6) + ', N: ' + SC.model.N.toPrecision(6) + ', RS: ' + SC.model.RS.toPrecision(6) + '},';
 };
 
 SC.updateModel = function () {
@@ -76,45 +102,13 @@ SC.updateModel = function () {
         temp = SC.fromEng(SC.e.temperature.value);
 
     SC.modelVA = SC.diodeCurve(vmax, temp, SC.model.IS, SC.model.N, SC.model.RS);
+
     if (SC.chart1.series[1]) {
         SC.chart1.series[1].data = SC.modelVA;
     }
     SC.chart1.render();
-    SC.e.spice.textContent = '.model NAME D(IS=' + SC.model.IS.toPrecision(6) + ' N=' + SC.model.N.toPrecision(6) + ' RS=' + SC.model.RS.toPrecision(6) + ')';
-};
-
-SC.scoreModelEndDistance = function (aModelVA, aMeasuredVA, aDebug) {
-    // measure score only as a distance of ends
-    if (!aModelVA || !aMeasuredVA) {
-        return 999;
-    }
-    var s, last_model_voltage, last_measured_voltage, last_model_current, last_measured_current, dv, di;
-    s = 0;
-
-    // it is important for model to end near measurements end, so worsen score
-    // if ends are too far apart, otherwise it would create models that have
-    // perfect match but only on small segment, but also don't emphasize ends
-    // too much otherwise it will only care about ends being close together and
-    // will ignore shape
-    last_model_voltage = aModelVA[aModelVA.length - 1][0];
-    last_measured_voltage = aMeasuredVA[aMeasuredVA.length - 1][0];
-    last_model_current = aModelVA[aModelVA.length - 1][1];
-    last_measured_current = aMeasuredVA[aMeasuredVA.length - 1][1];
-    dv = last_model_voltage - last_measured_voltage;
-    di = 1000 * (last_model_current - last_measured_current);
-    if (aDebug) {
-        console.log(di, dv);
-    }
-    s += Math.sqrt(dv * dv + di * di);
-    return s;
-};
-
-SC.bestFit = function () {
-    // Just match ends for now (gradient descent was too slow)
-    var i;
-    for (i = 0; i < 100; i++) {
-        SC.matchEnds(1);
-    }
+    SC.showDifference();
+    SC.showSpiceModel();
 };
 
 SC.onWheelNumberInputMultiply = function (event) {
@@ -131,102 +125,6 @@ SC.onWheelNumberInputAdd = function (event) {
     event.preventDefault();
     event.target.value = (parseFloat(event.target.value) + (event.wheelDeltaY > 0 ? step : -step)).toFixed(0);
     SC.updateModel();
-};
-
-SC.matchEnds = function (aSpeed) {
-    // change IS,N to move end closer to measured end
-    // Note: You can change sharpness of curve while preserving ends by changing
-    // any of the 2 of 3 parameters and keep the remaining 3rd parameter constant.
-    // Because Rs is closest to anything "real", I decided to change IS and N so
-    // that Rs remains reasonable. You can comment out IS and change N and RS but
-    // then Rs would have weird values, like 30ohm, or 12 pico ohm.
-    aSpeed = aSpeed || 1;
-    var d = SC.scoreModelEndDistance(SC.modelVA, SC.measuredVA),
-        s,
-        vmax = SC.measuredVA[SC.measuredVA.length - 1][0],
-        temp = SC.fromEng(SC.e.temperature.value),
-        speedIS = 1 + 0.01 * aSpeed,
-        speedN = 1 + 0.1 * aSpeed,
-        va;
-
-    // N up
-    va = SC.diodeCurve(vmax, temp, SC.model.IS, SC.model.N * speedN, SC.model.RS);
-    s = SC.scoreModelEndDistance(va, SC.measuredVA);
-    if (s < d) {
-        SC.model.N *= speedN;
-        SC.modelVA = va;
-        d = s;
-        //console.log('1 d', d, 'N', SC.model.N);
-    }
-    // N down
-    va = SC.diodeCurve(vmax, temp, SC.model.IS, SC.model.N / speedN, SC.model.RS);
-    s = SC.scoreModelEndDistance(va, SC.measuredVA);
-    if (s < d) {
-        SC.model.N /= speedN;
-        SC.modelVA = va;
-        d = s;
-        //console.log('2 d', d, 'N', SC.model.N);
-    }
-    // IS up
-    va = SC.diodeCurve(vmax, temp, SC.model.IS * speedIS, SC.model.N, SC.model.RS);
-    s = SC.scoreModelEndDistance(va, SC.measuredVA);
-    if (s < d) {
-        SC.model.IS *= speedIS;
-        SC.modelVA = va;
-        d = s;
-        //console.log('3 d', d, 'IS', SC.model.IS);
-    }
-    // IS down
-    va = SC.diodeCurve(vmax, temp, SC.model.IS / speedIS, SC.model.N, SC.model.RS);
-    s = SC.scoreModelEndDistance(va, SC.measuredVA);
-    if (s < d) {
-        SC.model.IS /= speedIS;
-        SC.modelVA = va;
-        d = s;
-    }
-    /*
-    // RS left
-    va = SC.diodeCurve(vmax, temp, SC.model.IS, SC.model.N, SC.model.RS * speedRS);
-    s = SC.scoreModelEndDistance(va, SC.measuredVA);
-    if (s < d) {
-        SC.model.RS *= speedRS;
-        SC.modelVA = va;
-        d = s;
-    }
-    // RS right
-    va = SC.diodeCurve(vmax, temp, SC.model.IS, SC.model.N, SC.model.RS / speedRS);
-    s = SC.scoreModelEndDistance(va, SC.measuredVA);
-    if (s < d) {
-        SC.model.RS /= speedRS;
-        SC.modelVA = va;
-        d = s;
-    }
-    */
-    SC.e.N.value = SC.model.N.toPrecision(8);
-    SC.e.IS.value = SC.model.IS.toPrecision(8);
-    SC.e.RS.value = SC.model.RS.toPrecision(8);
-    SC.chart1.series[1].data = SC.modelVA;
-    SC.updateModel();
-};
-
-SC.onSharper = function () {
-    // Make curve's knee sharper
-    SC.model.N /= 1.01;
-    SC.e.N.value = SC.model.N.toPrecision(8);
-    var i;
-    for (i = 0; i < 100; i++) {
-        SC.matchEnds(1);
-    }
-};
-
-SC.onDuller = function () {
-    // Make curve's knee duller (less sharp)
-    SC.model.N *= 1.01;
-    SC.e.N.value = SC.model.N.toPrecision(8);
-    var i;
-    for (i = 0; i < 100; i++) {
-        SC.matchEnds(1);
-    }
 };
 
 SC.onChangeMeasuredValues = function () {
@@ -246,11 +144,129 @@ SC.onChangePresetReal = function () {
     SC.updateModel();
 };
 
+SC.addSelectOptions = function (aSelect, aObject) {
+    // Add <options> to <select>
+    var a = Object.keys(aObject).sort(), i, o;
+    for (i = 0; i < a.length; i++) {
+        o = document.createElement('option');
+        o.textContent = a[i];
+        aSelect.appendChild(o);
+    }
+};
+
+SC.calculateDifference = function (aModelVA, aMeasuredVA) {
+    // Calculate difference between 2 curves
+    var vmin = Math.max(aModelVA[0][0], aMeasuredVA[0][0]),
+        vmax = Math.min(aModelVA[aModelVA.length - 1][0], aMeasuredVA[aMeasuredVA.length - 1][0]),
+        i,
+        model,
+        real,
+        im,
+        ir,
+        d,
+        v,
+        r = [],
+        sumd = 0,
+        maxd = 0;
+
+    model = new CA.Lerp(aModelVA);
+    real = new CA.Lerp(aMeasuredVA);
+
+    for (i = 0; i < 10; i++) {
+        v = vmin + i * (vmax - vmin) / 9;
+        ir = real.get(v);
+        im = model.get(v);
+        d = Math.abs(100 * ((Math.max(ir, im) / Math.min(ir, im)) - 1));
+        // count anything above 20% diff as twice as bad
+        if (SC.aggressiveScoring) {
+            if (d > 20) {
+                d += (d - 20) * 2;
+            }
+        }
+        if (d > maxd) {
+            maxd = d;
+        }
+        sumd += d;
+        r.push({
+            v: v,
+            ir: ir,
+            im : im,
+            d: d
+        });
+    }
+    return {
+        avg: sumd / 10,
+        max: maxd,
+        diff: SC.optimizeForAvg ? sumd : maxd,
+        points: r
+    };
+};
+
+SC.lastDifferenceTime = 0;
+
+SC.showDifference = function () {
+    // Show difference table but no faster than every 100ms
+    var t = Date.now(), i, r, points;
+    if (t - SC.lastDifferenceTime < 100) {
+        window.setTimeout(SC.showDifference, 200);
+        return;
+    }
+    r = SC.calculateDifference(SC.modelVA, SC.measuredVA);
+    points = r.points;
+    for (i = 0; i < points.length; i++) {
+        SC.e.diff_u_td[i].textContent = (1000 * points[i].v).toFixed(0);
+        SC.e.diff_i_real_td[i].textContent = SC.toEng(points[i].ir); //(1000 * model.get(v)).toFixed(6);
+        SC.e.diff_i_model_td[i].textContent = SC.toEng(points[i].im); //(1000 * model.get(v)).toFixed(6);
+        SC.e.diff_percent_td[i].textContent = points[i].d > 1000 ? '>1000' : points[i].d.toFixed(1); //(1000 * model.get(v)).toFixed(6);
+    }
+    SC.e.diff_total.textContent = r.diff.toFixed(3) + '% (' + SC.monteCarloRuns + ' runs)';
+    SC.e.js_diff.textContent = '// avg error ' + r.avg.toFixed(1) + '% max ' + r.max.toFixed(1) + '%';
+    SC.lastDifferenceTime = t;
+};
+
+SC.onLogYClick = function () {
+    // Switch between linear/logarithmic chart
+    SC.chart1.logY = SC.e.logy.checked;
+    SC.chart1.resetZoomAndPan();
+};
+
+SC.onOptimizeForClick = function () {
+    // Switch mode of optimization
+    SC.optimizeForAvg = SC.e.optimize_for_avg.checked;
+    SC.showDifference();
+};
+
 window.addEventListener('DOMContentLoaded', function () {
+    // init
     SC.e = CA.elements('preset_real', 'measured_values', 'zoom_to_fit', 'preset_model',
-        'temperature',
+        'temperature', 'logy',
+        'diff_u', 'diff_i_model', 'diff_i_real', 'diff_percent', 'diff_total',
         'IS', 'N', 'RS',
-        'best_fit', 'spice', 'sharper', 'duller');
+        'spice', 'js_code', 'js_diff',
+        'start_monte_carlo', 'stop_monte_carlo',
+        'optimize_for_max', 'optimize_for_avg');
+
+    // log chart switch
+    SC.e.logy.onclick = SC.onLogYClick;
+
+    // optimize
+    SC.e.optimize_for_avg.onclick = SC.onOptimizeForClick;
+    SC.e.optimize_for_max.onclick = SC.onOptimizeForClick;
+    SC.e.start_monte_carlo.onclick = SC.startMonteCarlo;
+    SC.e.stop_monte_carlo.onclick = SC.stopMonteCarlo;
+
+    // diff table
+    SC.e.diff_u_td = SC.e.diff_u.getElementsByTagName('td');
+    SC.e.diff_i_model_td = SC.e.diff_i_model.getElementsByTagName('td');
+    SC.e.diff_i_real_td = SC.e.diff_i_real.getElementsByTagName('td');
+    SC.e.diff_percent_td = SC.e.diff_percent.getElementsByTagName('td');
+
+    // preset combo
+    SC.addSelectOptions(SC.e.preset_real, SC.realDiode);
+    SC.e.preset_real.value = '1N4007';
+
+    // model combo
+    SC.addSelectOptions(SC.e.preset_model, SC.diodeModel);
 
     // settings
     SC.e.temperature.oninput = SC.updateModel;
@@ -288,14 +304,23 @@ window.addEventListener('DOMContentLoaded', function () {
     // preset model
     SC.e.preset_model.onchange = function () {
         var o = SC.diodeModel[SC.e.preset_model.value];
-        SC.e.IS.value = o.IS;
-        SC.e.N.value = o.N;
-        SC.e.RS.value = o.RS;
-        SC.updateModel();
+        if (o) {
+            SC.e.IS.value = o.IS;
+            SC.e.N.value = o.N;
+            SC.e.RS.value = o.RS;
+            SC.updateModel();
+        }
     };
 
-    // best fit/sharper/duller
-    SC.e.best_fit.onclick = SC.bestFit;
-    SC.e.sharper.onclick = SC.onSharper;
-    SC.e.duller.onclick = SC.onDuller;
+    // test
+    /*
+    SC.e.preset_real.value = 'LED_BLUE';
+    SC.e.preset_real.onchange();
+    SC.e.preset_model.value = 'LED_BLUE';
+    SC.e.preset_model.onchange();
+    SC.showDifference();
+    SC.chart1.logY = true;
+    SC.e.logy.checked = SC.chart1.logY;
+    SC.chart1.resetZoomAndPan();
+    */
 });
