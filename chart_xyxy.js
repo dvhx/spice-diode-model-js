@@ -8,7 +8,7 @@ SC.showChartCursor = true;
 
 SC.palette = ['#ff0000', '#00ff00', '#0077ff', '#ffff00', '#ff00ff', '#00ffff'];
 
-SC.ChartXYXY = function (aCanvasOrId) {
+SC.ChartXYXY = function (aCanvasOrId, aStretch) {
     //var pan, p1, p2, t = this, rec;
     var t = this, pan, rec, p1, p2;
     this.logY = false;
@@ -16,7 +16,7 @@ SC.ChartXYXY = function (aCanvasOrId) {
     this.constraints = {minx: 0, maxx: 0, miny: 0, maxy: 0};
     this.dots = false;
     this.frames = 0;
-    this.canvas = new CA.Canvas(aCanvasOrId);
+    this.canvas = new CA.Canvas(aCanvasOrId, undefined, undefined, aStretch);
     this.canvas.line(0, 0, this.canvas.w, this.canvas.h);
     //this.canvas.canvas.style.backgroundColor = 'black';
     this.gridX = 0.1;
@@ -124,6 +124,9 @@ SC.ChartXYXY.prototype.updateConstraints = function () {
     var s, i, x, y, d;
     this.constraints = {minx: 0, maxx: 0, miny: Number.MAX_VALUE, maxy: -Number.MAX_VALUE};
     for (s = 0; s < this.series.length; s++) {
+        if (!this.series[s].visible) {
+            continue;
+        }
         d = this.series[s].data;
         for (i = 1; i < d.length; i++) {
             x = d[i][0];
@@ -138,7 +141,7 @@ SC.ChartXYXY.prototype.updateConstraints = function () {
 
 SC.ChartXYXY.prototype.addSeries = function (aName, aColor, aData) {
     // update constraints
-    var i, x, y;
+    var i, x, y, r;
     for (i = 1; i < aData.length; i++) {
         x = aData[i][0];
         y = aData[i][1];
@@ -148,12 +151,14 @@ SC.ChartXYXY.prototype.addSeries = function (aName, aColor, aData) {
         this.constraints.maxy = Math.max(this.constraints.maxy, y);
     }
     // add to series
-    this.series.push({
+    r = this.series.push({
         name: aName,
         data: aData,
-        color: aColor || SC.palette[this.series.length % SC.palette.length]
+        color: aColor || SC.palette[this.series.length % SC.palette.length],
+        visible: true
     });
     this.resetZoomAndPan();
+    return r - 1;
 };
 
 SC.ChartXYXY.prototype.resetZoomAndPan = function () {
@@ -292,6 +297,9 @@ SC.ChartXYXY.prototype.render = function () {
 
     // all series
     for (s = 0; s < this.series.length; s++) {
+        if (!this.series[s].visible) {
+            continue;
+        }
         ser = this.series[s];
         this.canvas.context.lineWidth = 2;
         this.canvas.context.strokeStyle = ser.color;
