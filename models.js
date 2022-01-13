@@ -34,6 +34,9 @@ SC.diodeModel = {
     "FR207": {IS: 4.19814e-10, N: 1.45297, RS: 5.25472}, // avg error 10.8% max 33.9%
     "FR207_2": {IS: 5.72432e-10, N: 1.49482, RS: 4.08107}, // avg error 13.0% max 19.1%
 
+    "FR302": {IS: 1.50494e-10, N: 1.13749, RS: 1.65315}, // avg error 6.6% max 26.8%
+    "FR302_2": {IS: 2.12652e-10, N: 1.16728, RS: 1.78382}, // avg error 7.6% max 11.6%
+
     "PR1504": {IS: 2.08298e-10, N: 1.29583, RS: 3.54298}, // avg error 10.0% max 21.9%
     "PR1504_2": {IS: 1.73086e-10, N: 1.27604, RS: 3.43550}, // avg error 10.6% max 15.9%
 
@@ -51,4 +54,7 @@ SC.diodeModel = {
 
     "LED_YELLOW": {IS: 1.38357e-21, N: 1.79130, RS: 6.08539}, // avg error 5.6% max 11.6%
     "LED_YELLOW_2": {IS: 1.58700e-21, N: 1.79686, RS: 5.93804}, // avg error 6.0% max 8.8%
+
+    "SFF3DG": {IS: 3.41787e-11, N: 1.06219, RS: 0.742020}, // avg error 3.7% max 24.4%
+    "SFF3DG_2": {IS: 4.69934e-11, N: 1.08379, RS: 0.813738}, // avg error 6.5% max 10.2%
 };
