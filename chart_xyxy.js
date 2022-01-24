@@ -271,7 +271,7 @@ SC.ChartXYXY.prototype.render = function () {
             '1nA': 0.000000001,
             '100pA': 0.0000000001,
             '10pA': 0.00000000001,
-            '1pA': 0.000000000001,
+            '1pA': 0.000000000001
         };
         for (y in ly) {
             if (ly.hasOwnProperty(y)) {
@@ -301,7 +301,12 @@ SC.ChartXYXY.prototype.render = function () {
             continue;
         }
         ser = this.series[s];
-        this.canvas.context.lineWidth = 2;
+        if (ser.highlight) {
+            this.canvas.context.setLineDash([5, 2]);
+        } else {
+            this.canvas.context.setLineDash([]);
+        }
+        this.canvas.context.lineWidth = ser.highlight ? 2 : 2;
         this.canvas.context.strokeStyle = ser.color;
         this.canvas.context.fillStyle = ser.color;
         this.canvas.context.beginPath();
