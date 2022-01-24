@@ -70,18 +70,19 @@ SC.onChangeMeasuredValues = function () {
     // convert csv to array of array of numbers
     var ui = SC.e.measured_values.value.trim().split('\n').map(function (a) {
         return a.trim().split(',').map(parseFloat);
-    });
+    }).sort(function (a, b) { return a[0] - b[0]; });
     SC.measuredVA = ui;
     SC.chart1.series[SC.index].data = ui;
     SC.chart1.render();
 };
 
 SC.findSimilar = function () {
+    // Find most similar diodes to measured data
     var k, d, candidate = [], i;
     for (k in SC.all) {
         if (SC.all.hasOwnProperty(k)) {
             d = SC.calculateDifference(SC.all[k].values, SC.measuredVA);
-            if (k.startsWith('resistor')) {
+            if (k.substr(0, 8) === 'resistor') {
                 d = Number.MAX_VALUE;
             }
             candidate.push({k: k, avg: d.avg});
