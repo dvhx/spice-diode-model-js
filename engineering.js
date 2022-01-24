@@ -17,7 +17,8 @@ SC.fromEng = function (aValue) {
             m: 1e-3,
             u: 1e-6,
             n: 1e-9,
-            p: 1e-12
+            p: 1e-12,
+            f: 1e-15
         };
     suffix = v.substr(-1);
     k = multiplier[suffix] || 1;
@@ -71,6 +72,10 @@ SC.toEng = function (aReal) {
         aReal = aReal * 1000;
         if ((aReal >= 1) && (aReal < 1000)) {
             return out(aReal) + 'p';
+        }
+        aReal = aReal * 1000;
+        if ((aReal >= 1) && (aReal < 1000)) {
+            return out(aReal) + 'f';
         }
     }
     return out(orig);
