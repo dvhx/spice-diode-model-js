@@ -60,4 +60,7 @@ SC.diodeModel = {
 
     "SFF3DG": {IS: 3.41787e-11, N: 1.06219, RS: 0.742020}, // avg error 3.7% max 24.4%
     "SFF3DG_2": {IS: 4.69934e-11, N: 1.08379, RS: 0.813738}, // avg error 6.5% max 10.2%
+
+    "BAT43": {IS: 2.87591e-7, N: 1.00985, RS: 1.24219}, // avg error 1.1% max 4.0%
+    "BAT43_2": {IS: 2.88561e-7, N: 1.00834, RS: 1.27012}, // avg error 1.6% max 2.8%
 };
