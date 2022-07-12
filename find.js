@@ -223,6 +223,10 @@ window.addEventListener('DOMContentLoaded', function () {
     SC.onChangeMeasuredValues();
 
     // workaround for flex and stretched canvas
+    window.setTimeout(function () {
+        SC.chart1.canvas.resize(SC.chart1.canvas.canvas.clientWidth, SC.chart1.canvas.canvas.clientHeight);
+        SC.chart1.render();
+    }, 300);
     window.requestAnimationFrame(function () {
         //console.log(SC.chart1.canvas.canvas.clientWidth, SC.chart1.canvas.canvas.clientHeight);
         SC.chart1.canvas.resize(SC.chart1.canvas.canvas.clientWidth, SC.chart1.canvas.canvas.clientHeight);
