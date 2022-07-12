@@ -71,60 +71,14 @@
 
     #diodes {
         _outline: 1px solid blue;
+        max-height: 100vh;
+        overflow-y: scroll;
     }
     #diodes label {
         user-select: none;
         display: block;
     }
     </style>
-
-    <!--
-    h3 {
-        margin: 0;
-        padding: 0;
-    }
-    label {
-        display: inline-block;
-        min-width: 4em;
-    }
-    input[type=number] {
-        max-width: 18ex;
-        min-width: 18ex;
-    }
-    table, tr, td, th {
-        border: 1px solid black;
-        border-collapse: collapse;
-    }
-    td {
-        min-width: 3ex;
-        text-align: right;
-        max-width: 3em;
-        overflow: hidden;
-    }
-    #chart1 {
-      width: 100%;
-      height: 80vw;
-    }
-    @media only screen and (min-width: 800px) {
-      #chart {
-        display: inline-block;
-      }
-      #chart table {
-        max-widthg: 50vw;
-      }
-      #chart1 {
-          width: 45vw;
-          height: 45vw;
-      }
-      main {
-        max-width: 50vw;
-        position: fixed;
-        left: 50vw;
-        top: 1ex;
-      }
-    }
-    </style>
-    -->
   </head>
   <body>
 
@@ -185,136 +139,6 @@
     <div id="diodes">
         <label style="color: red;"><input id="unknown" type="checkbox" checked>unknown</label>
     </div>
-
-    <!-- div id="chart" style="outline: 0px solid red;">
-        <canvas id="chart1" style=""></canvas>
-
-        <div style="display: flex; align-items: center;">
-            <label style="user-select: none;"><input id="logy" type="checkbox">Logarithmic</label>
-            <div style="flex: 1;"></div>
-            <div>
-                <span style="color: red;">&mdash;</span> real diode,
-                <span style="color: green;">&mdash;</span> model
-            </div>
-        </div>
-
-        <br>
-        Difference: <span id="diff_total">0</span>
-        <table id="diff" style="font-size: small;">
-            <tr id="diff_u">
-                <th>U/mV</th>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-            </tr>
-            <tr id="diff_i_real">
-                <th>I<sub>real</sub>/mA</th>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-            </tr>
-            <tr id="diff_i_model">
-                <th>I<sub>model</sub>/mA</th>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-            </tr>
-            <tr id="diff_percent">
-                <th>Δ/%</th>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-            </tr>
-        </table>
-        <br>
-        Optimize model
-        <label title="Optimize model to have lowest average difference"><input id="optimize_for_avg" name="optimize_for" type="radio" checked>average</label>
-        <label title="Optimize model to have lowest maximal difference"><input id="optimize_for_max" name="optimize_for" type="radio">max</label>
-        <button id="start_monte_carlo">Start</button>
-        <button id="stop_monte_carlo" disabled>Stop</button>
-    </div>
-
-    <main>
-
-        <h3>Settings</h3>
-
-        <p>
-        <label>Temperature</label>
-        <input id="temperature" type="number" value="25" min="-273" max="150" step="1" dataWheelStep="1"/>°C
-        </p>
-
-
-        <h3 style="color: red;">Real diode</h3>
-
-        <p>
-        Paste CSV file with forward voltage in volts and forward current in amps (e.g. 2.7mA is 0.0027 or 2.7e-3), comma separated values, each measurement on new line.
-        You can also use one of these real measured diodes:
-        <select id="preset_real"></select>
-        <a href="how_to_measure_diode.png">How to measure diode</a>
-        <br>
-        <br>
-
-        <textarea id="measured_values" style="width: 18em; height: 22em; display: block;" placeholder="Paste CSV file here"></textarea>
-        </p>
-
-
-        <h3 style="color: green;">Diode model</h3>
-
-        <p>
-
-        <label>IS</label>
-        <input title="" id="IS" type="number" value="1.46464e-9" min="0" max="10" step="0.000000000001" dataWheelStep="0.05"/>A - Reverse saturation current
-        <br>
-
-        <label>N</label>
-        <input title="" id="N" type="number" value="1.71972" min="0" max="10" step="0.01" dataWheelStep="0.005"/> Emission coefficient
-        <br>
-
-        <label>RS</label>
-        <input title="" id="RS" type="number" value="0.355592" min="0" max="1000" step="0.01" dataWheelStep="0.1"/>Ω - Ohmic (series) resistance
-        <br>
-
-        <label>Preset</label>
-        <select id="preset_model">
-            <option selected></option>
-        </select>
-        </p>
-
-        <p style="font-size: small;">
-        <b>Spice code:</b> <span id="spice"></span><br><br>
-
-        <b>JS code:</b> <span id="js_code"></span> <span id="js_diff"></span><br>
-        </p>
-
-    </main -->
 
   </body>
 </html>
