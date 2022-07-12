@@ -112,7 +112,10 @@ SC.ChartXYXY = function (aCanvasOrId, aStretch) {
         t.cursor = null;
         t.render();
     });
-    window.addEventListener('resize', function () { t.render(); });
+    window.addEventListener('resize', function () {
+        t.canvas.resize();
+        t.render();
+    });
     window.addEventListener('contextmenu', function () {
         t.cursor = null;
         t.render();
