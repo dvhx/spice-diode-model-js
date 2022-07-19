@@ -76,9 +76,9 @@ SC.onChangeMeasuredValues = function () {
     SC.chart1.render();
 };
 
-SC.findSimilar = function () {
+SC.findSimilar = function (event) {
     // Find most similar diodes to measured data
-    var k, d, candidate = [], i, palette = ['green', 'blue', 'orange', 'purple', 'brown', 'teal', 'lime'];
+    var k, d, candidate = [], i, palette;
     for (k in SC.all) {
         if (SC.all.hasOwnProperty(k)) {
             d = SC.calculateDifference(SC.all[k].values, SC.measuredVA);
@@ -91,7 +91,9 @@ SC.findSimilar = function () {
     }
 
     palette = ['green', 'blue', 'orange', 'lime'];
-    //palette = ['#007700ff', '#00ff00ff', '#00ff00cc', '#00ff00aa', '#00ff0077', '#00ff0044'];
+    if (event && event.target && (event.target.id === 'check_similar_10')) {
+        palette = ['green', 'blue', 'orange', 'lime', '#000', '#333', '#555', '#888', '#aaa', '#ccc'];
+    }
 
     candidate.sort(function (a, b) {
         return a.avg - b.avg;
@@ -163,10 +165,18 @@ SC.onHoverLabel = function (event) {
     SC.chart1.render();
 };
 
+SC.onClickCopy = function (event) {
+    // Copy diode values to textarea
+    //alert(event.target.dataKey);
+    //console.log(SC.realDiode[event.target.dataKey]);
+    SC.e.measured_values.value = SC.realDiode[event.target.dataKey].join('\n').replace(/ /g, '');
+    SC.onChangeMeasuredValues();
+};
+
 window.addEventListener('DOMContentLoaded', function () {
     // init
     SC.e = CA.elements('measured_values', 'zoom_to_fit', 'logy', 'diodes',
-        'check_all', 'check_none', 'check_similar', 'unknown', 'clear');
+        'check_all', 'check_none', 'check_similar', 'check_similar_10', 'unknown', 'clear');
 
 
     SC.e.clear.onclick = SC.onClear;
@@ -174,6 +184,7 @@ window.addEventListener('DOMContentLoaded', function () {
     SC.e.check_all.onclick = SC.checkAll;
     SC.e.check_none.onclick = SC.checkNone;
     SC.e.check_similar.onclick = SC.findSimilar;
+    SC.e.check_similar_10.onclick = SC.findSimilar;
 
     // chart
     SC.chart1 = new SC.ChartXYXY('chart1');
@@ -184,7 +195,7 @@ window.addEventListener('DOMContentLoaded', function () {
 
     // add known diodes
     SC.all = {};
-    var k, lab, chb, i, score;
+    var k, lab, chb, i, score, copy;
     for (k in SC.realDiode) {
         if (SC.realDiode.hasOwnProperty(k)) {
             i = SC.chart1.addSeries(k, 'gray', SC.realDiode[k]);
@@ -205,6 +216,16 @@ window.addEventListener('DOMContentLoaded', function () {
             score.dataKey = k;
             score.textContent = '';
             lab.appendChild(score);
+
+            copy = document.createElement('span');
+            copy.title = 'Copy values to textarea field on the left (unknown diode) to find similar diodes';
+            copy.textContent = '📋';
+            copy.dataKey = k;
+            copy.onclick = SC.onClickCopy;
+            copy.style.cursor = 'copy';
+            lab.appendChild(copy);
+
+
             SC.e.diodes.appendChild(lab);
             SC.all[k] = {
                 index: i,
