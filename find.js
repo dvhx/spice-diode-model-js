@@ -171,6 +171,35 @@ SC.onClickCopy = function (event) {
     //console.log(SC.realDiode[event.target.dataKey]);
     SC.e.measured_values.value = SC.realDiode[event.target.dataKey].join('\n').replace(/ /g, '');
     SC.onChangeMeasuredValues();
+    event.preventDefault();
+    event.stopPropagation();
+};
+
+SC.compareDiodes = function (aNames) {
+    // show only specified diode names
+    var i, k, ser;
+    // hide unknown
+    SC.e.unknown.checked = false;
+    SC.chart1.series[SC.index].visible = false;
+    // hide all
+    for (k in SC.all) {
+        if (SC.all.hasOwnProperty(k)) {
+            SC.all[k].chb.checked = false;
+            SC.chart1.series[SC.all[k].chb.dataIndex].visible = false;
+        }
+    }
+    // show named diodes
+    for (i = 0; i < aNames.length; i++) {
+        if (!SC.all[aNames[i]]) {
+            alert('Diode not found: ' + aNames[i]);
+            continue;
+        }
+        SC.all[aNames[i]].chb.checked = true;
+        ser = SC.chart1.series[SC.all[aNames[i]].chb.dataIndex];
+        ser.visible = true;
+        ser.color = SC.paletteCompare[i] || ser.color;
+        SC.all[aNames[i]].lab.style.color = ser.color;
+    }
 };
 
 window.addEventListener('DOMContentLoaded', function () {
@@ -249,7 +278,29 @@ window.addEventListener('DOMContentLoaded', function () {
         SC.chart1.render();
     }, 300);
     window.requestAnimationFrame(function () {
-        //console.log(SC.chart1.canvas.canvas.clientWidth, SC.chart1.canvas.canvas.clientHeight);
+        // hash = comma separated names to compare
+        var s = document.location.search, d;
+        if (s.substr(0, 9) === '?compare=') {
+            SC.compareDiodes(s.substr(9).split(','));
+            SC.chart1.canvas.resize(SC.chart1.canvas.canvas.clientWidth, SC.chart1.canvas.canvas.clientHeight);
+            SC.chart1.resetZoomAndPan();
+            return;
+        }
+        if (s.substr(0, 9) === '?similar=') {
+            d = s.substr(9).split(',');
+            if (!SC.all[d]) {
+                alert('No such diode ' + d);
+            } else {
+                SC.e.unknown.checked = false;
+                SC.chart1.series[SC.index].visible = false;
+                SC.chart1.canvas.resize(SC.chart1.canvas.canvas.clientWidth, SC.chart1.canvas.canvas.clientHeight);
+                SC.e.measured_values.value = SC.all[d].values.join('\n');
+                SC.onChangeMeasuredValues();
+                SC.findSimilar();
+                SC.chart1.resetZoomAndPan();
+            }
+        }
+        // find similar
         SC.chart1.canvas.resize(SC.chart1.canvas.canvas.clientWidth, SC.chart1.canvas.canvas.clientHeight);
         SC.chart1.render();
         SC.findSimilar();

@@ -7,6 +7,7 @@ var SC = window.SC || {};
 SC.showChartCursor = true;
 
 SC.palette = ['#ff0000', '#00ff00', '#0077ff', '#ffff00', '#ff00ff', '#00ffff'];
+SC.paletteCompare = ['#e59900', '#529900', '#0d3326', '#b22d50', '#00d6e6', '#0081f2', '#14004d', '#796080', '#d600e6'];
 
 SC.ChartXYXY = function (aCanvasOrId, aStretch) {
     //var pan, p1, p2, t = this, rec;
